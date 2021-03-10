@@ -177,24 +177,29 @@ function App() {
         let provider = new ethers.providers.Web3Provider(ethereum);
         //console.log(`${amounttoadd} :: ${env.USDT_MAINNET} :: ${ethereum.selectedAddress} :: ${deadline} :: ${env.MAINNET_UNISWAPROUTER02_ADDRESS} :: ${env.INFURA_MAINNET} :: ${env.MAINNET_ANTEBELLUM_PRIVATE_KEY}`);
         let weiamount = web3.utils.toWei(amounttoadd,'ether')
+        //let _inputTokenAmount = web3.utils.toWei(inputTokenAmount,'ether')
+        //let _outputTokenAmount = web3.utils.toWei(outputTokenAmount, 'ether')
 
 
         //withdraw from liquidity pool
-        /*const params = [{
+        const params = [{
             gasPrice:  web3.utils.toHex(2412500000), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
             gasLimit: 8000000, // customizable by user during MetaMask confirmation.
             from: ethereum.selectedAddress, // must match user's active address.
             value: weiamount, // Only required to send ether to the recipient from the initiating external account.
             data: uniswaprouter.methods.removeLiquidity(
-                                            amount,
-                                            min_eth,
-                                            min_tokens,
-                                            deadline
-                                ).encodeABI()
+                                                        env.ETH_CONTRACT_ADDRESS,
+                                                        selectedliquidity,
+                                                        new BigNumber(weiamount),
+                                                        new BigNumber(inputTokenAmount),
+                                                        new BigNumber(outputTokenAmount),
+                                                        ethereum.selectedAddress,
+                                                        deadline
+                                                    ) .encodeABI()
         }];
 
         const transactionHash = await provider.send('eth_sendTransaction', params)
-        console.log('transactionHash is ' + transactionHash);*/
+        console.log('transactionHash is ' + transactionHash);
         
     }
 
