@@ -1,0 +1,4 @@
+**/node_modules/
+jaypernotes.md
+/node_modules
+.env
