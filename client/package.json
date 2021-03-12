@@ -16,6 +16,7 @@
     "@ethersproject/solidity": "^5.0.9",
     "@truffle/hdwallet-provider": "^1.2.2",
     "@uniswap/sdk": "^3.0.3",
+    "axios": "^0.21.1",
     "bufferutil": "^4.0.1",
     "ether": "0.0.9",
     "ethers": "^5.0.31",

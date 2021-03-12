@@ -3,6 +3,7 @@ import './App.css';
 import React, {useState, useEffect} from 'react'
 import { Link, useHistory } from 'react-router-dom'
 import Select from "react-select";
+import axios from 'axios';
 import BigNumber from 'bignumber.js';
 import env from "react-dotenv";
 import Web3 from 'web3';
@@ -13,8 +14,6 @@ import detectEthereumProvider from '@metamask/detect-provider';
 import { ChainId, Token, TokenAmount, Pair, Route, Fetcher, WETH, Percent, Trade, TradeType } from '@uniswap/sdk'
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import uniswapv2routerJSON from './UniswapV2Router.json';
-
-
 
 function App() {
 
@@ -75,9 +74,16 @@ function App() {
         //injecting web3 into Metamask or any other Ethereum wallet extension
         window.ethereum.enable();
         let accounts = web3.eth.accounts;
-        console.log(accounts[0])
+        //Get current gas cost from Eth Gas Station
+        axios.get(`https://ethgasstation.info/api/ethgasAPI.json?api-key=510e5437d0d81016ceafb6e9b96fd9998482aef4c7d337fc41c58f929d25`)
+        .then(res => {
+           sessionStorage.setItem('gweifast',(res.data.fast/10))
+           sessionStorage.setItem('gweifastest',(res.data.fastest/10))
+           sessionStorage.setItem('gweisafelow', (res.data.safeLow/10))
+        })
     });
 
+    //Get Execution Prices
     async function priceLevels(e) {
         e.preventDefault();
         let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
@@ -101,7 +107,7 @@ function App() {
 
     }
     
-
+    //Add to liquidity
     async function addLiquidity(e) {
         e.preventDefault();
 
@@ -133,8 +139,8 @@ function App() {
         
         // Acccounts now exposed
         const params = [{
-            gasPrice:  web3.utils.toHex(2412500000), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
-            gasLimit: 8000000, // customizable by user during MetaMask confirmation.
+            gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
+            gasLimit: (sessionStorage.getItem('gweifastest')).padEnd(9,0), // customizable by user during MetaMask confirmation.
             from: ethereum.selectedAddress, // must match user's active address.
             value: weiamount, // Only required to send ether to the recipient from the initiating external account.
             data: uniswaprouter.methods.swapETHForExactTokens(
@@ -150,6 +156,7 @@ function App() {
         
     }
     
+    //Withdraw from Liquidity
     async function withdrawFromLiquidity(e) {
             e.preventDefault();
             let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
@@ -175,16 +182,13 @@ function App() {
         let ethereum = window.ethereum;
         await ethereum.enable();
         let provider = new ethers.providers.Web3Provider(ethereum);
-        //console.log(`${amounttoadd} :: ${env.USDT_MAINNET} :: ${ethereum.selectedAddress} :: ${deadline} :: ${env.MAINNET_UNISWAPROUTER02_ADDRESS} :: ${env.INFURA_MAINNET} :: ${env.MAINNET_ANTEBELLUM_PRIVATE_KEY}`);
         let weiamount = web3.utils.toWei(amounttoadd,'ether')
-        //let _inputTokenAmount = web3.utils.toWei(inputTokenAmount,'ether')
-        //let _outputTokenAmount = web3.utils.toWei(outputTokenAmount, 'ether')
-
+        
 
         //withdraw from liquidity pool
         const params = [{
-            gasPrice:  web3.utils.toHex(2412500000), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
-            gasLimit: 8000000, // customizable by user during MetaMask confirmation.
+            gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
+            gasLimit: (sessionStorage.getItem('gweifastest')).padEnd(9,0), // customizable by user during MetaMask confirmation.
             from: ethereum.selectedAddress, // must match user's active address.
             value: weiamount, // Only required to send ether to the recipient from the initiating external account.
             data: uniswaprouter.methods.removeLiquidity(
