@@ -94,8 +94,8 @@ function App() {
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
         const tokenAmount = new TokenAmount(weth, amountIn);
-        const trade = new Trade( route,  tokenAmount, TradeType.EXACT_INPUT);
-        
+        //const trade = new Trade( route,  tokenAmount, TradeType.EXACT_INPUT);
+        const trade = new Trade(route, new TokenAmount(weth, '100000000000000000'), TradeType.EXACT_INPUT)
         let midPrice = route.midPrice.toSignificant(6);
         let executionPrice = trade.executionPrice.toSignificant(6);
         let nextMidPrice = trade.nextMidPrice.toSignificant(6);
@@ -119,13 +119,14 @@ function App() {
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
         const tokenAmount = new TokenAmount(weth, amountIn);
-        const trade = new Trade( route,  tokenAmount, TradeType.EXACT_INPUT);
+        //const trade = new Trade( route,  tokenAmount, TradeType.EXACT_INPUT);
+        const trade = new Trade(route, new TokenAmount(weth, '100000000000000000'), TradeType.EXACT_INPUT)
         
         
         //setup Swap data
         const slippageTolerance = new Percent('50','10000') //50 bips 1 bip = 0.050
         const amountOutMin = trade.minimumAmountOut(slippageTolerance).raw;
-        const path = [weth.address, usdt.address];
+        const path = [weth.address, usdt.address]; //now we can interact with this pair
         const to = '';
         const deadline = Math.floor(Date.now()/1000) + 60 * 20;
         const inputTokenAmount = trade.inputAmount.raw;
@@ -167,7 +168,8 @@ function App() {
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
         const tokenAmount = new TokenAmount(weth, amountIn);
-        const trade = new Trade( route,  tokenAmount, TradeType.EXACT_INPUT);
+        //const trade = new Trade( route,  tokenAmount, TradeType.EXACT_INPUT);
+        const trade = new Trade(route, new TokenAmount(weth, '100000000000000000'), TradeType.EXACT_INPUT)
         
         
         //setup Swap data
@@ -271,6 +273,23 @@ function App() {
                     <label><b>Next Mid Price</b> ${executionPrice}</label>
                 </div>
         </p>
+
+        <div>
+        <p>
+                <div>
+                    <label><b>ETH Gas Station Price</b></label>
+                </div>
+                <div>
+                    <label><b>Trader ASAP</b> ${  sessionStorage.getItem('gweifastest') }</label>
+                </div>
+                <div>
+                <label><b>Fast less than 2 minutes</b> ${  sessionStorage.getItem('gweifast') }</label>
+                </div>    
+                <div>
+                <label><b>Standard than 5 minutes</b> ${  sessionStorage.getItem('gweisafelow') }</label>
+                </div>
+        </p>
+        </div>
 
     </div>
   );
