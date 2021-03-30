@@ -23,7 +23,7 @@ function App() {
     
     let ethereum = window.ethereum;
     console.log(`Ethereum is Connected ${ethereum.isConnected()} selected address :: ${ethereum.selectedAddress}`)
-    const web3 = new Web3(Web3.currentProvider || env.INFURA_MAINNET)
+    const web3 = new Web3(Web3.currentProvider || env.INFURA_KOVAN)
     let provider = detectEthereumProvider();
     if(provider) {
         console.log(`Ethereum successfully detected`)
@@ -32,10 +32,10 @@ function App() {
         console.log(`Need to install Metamask`)
     }
 
-    const uniswaprouter = new web3.eth.Contract(uniswapv2routerJSON, env.MAINNET_FACTORY_ADDRESS);
+    const uniswaprouter = new web3.eth.Contract(uniswapv2routerJSON, env.MAINNET_UNISWAPROUTER02_ADDRESS);
     const chainId = ChainId.MAINNET;
-    const USDT_MAINNET = web3.utils.toChecksumAddress(env.USDT_MAINNET);
-    const DAI_MAINNET = web3.utils.toChecksumAddress(env.DAI_MAINNET);
+    const USDT_KOVAN = web3.utils.toChecksumAddress(env.USDT_MAINNET);
+    const DAI_KOVAN = web3.utils.toChecksumAddress(env.DAI_MAINNET);
     const ETH_CONTRACT_ADDRESS = env.ETH_CONTRACT_ADDRESS;
     
     const [httpprovider, sethttpprovider] = useState(env.INFURA_MAINNET)
@@ -56,8 +56,8 @@ function App() {
     const [slippageTolerance, setslippageTolerance] = useState();
     
     const pools = [
-        {label:"usdt/weth", value:USDT_MAINNET},
-        {label:"weth/dai", value:DAI_MAINNET}
+        {label:"usdt/weth", value:env.USDT_MAINNET},
+        {label:"weth/dai", value:env.DAI_MAINNET}
     ]
 
     const options = [
@@ -89,7 +89,7 @@ function App() {
         let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
         //console.log('priceLevel');
         const amountIn = new BigNumber(convertedAmnt) //0.001 ETH
-        const usdt = await Fetcher.fetchTokenData(chainId,DAI_MAINNET);
+        const usdt = await Fetcher.fetchTokenData(chainId,env.DAI_MAINNET);
         const weth = await WETH[chainId];
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
@@ -114,12 +114,11 @@ function App() {
         let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
         //console.log('priceLevel');
         const amountIn = new BigNumber(convertedAmnt) //0.001 ETH
-        const usdt = await Fetcher.fetchTokenData(chainId,DAI_MAINNET);
+        const usdt = await Fetcher.fetchTokenData(chainId, env.DAI_MAINNET);
         const weth = await WETH[chainId];
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
         const tokenAmount = new TokenAmount(weth, amountIn);
-        //const trade = new Trade( route,  tokenAmount, TradeType.EXACT_INPUT);
         const trade = new Trade(route, new TokenAmount(weth, '100000000000000000'), TradeType.EXACT_INPUT)
         
         
@@ -135,7 +134,6 @@ function App() {
         let ethereum = window.ethereum;
         await ethereum.enable();
         let provider = new ethers.providers.Web3Provider(ethereum);
-        //console.log(`${amounttoadd} :: ${env.USDT_MAINNET} :: ${ethereum.selectedAddress} :: ${deadline} :: ${env.MAINNET_UNISWAPROUTER02_ADDRESS} :: ${env.INFURA_MAINNET} :: ${env.MAINNET_ANTEBELLUM_PRIVATE_KEY}`);
         let weiamount = web3.utils.toWei(amounttoadd,'ether')
         
         // Acccounts now exposed
@@ -159,16 +157,14 @@ function App() {
     
     //Withdraw from Liquidity
     async function withdrawFromLiquidity(e) {
-            e.preventDefault();
-            let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
-        //console.log('priceLevel');
+        e.preventDefault();
+        let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
         const amountIn = new BigNumber(convertedAmnt) //0.001 ETH
-        const usdt = await Fetcher.fetchTokenData(chainId,DAI_MAINNET);
+        const usdt = await Fetcher.fetchTokenData(chainId, env.DAI_MAINNET);
         const weth = await WETH[chainId];
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
         const tokenAmount = new TokenAmount(weth, amountIn);
-        //const trade = new Trade( route,  tokenAmount, TradeType.EXACT_INPUT);
         const trade = new Trade(route, new TokenAmount(weth, '100000000000000000'), TradeType.EXACT_INPUT)
         
         

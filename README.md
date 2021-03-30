@@ -28,3 +28,7 @@ After following the [quick-start Smart Contract Integration](https://uniswap.org
 To get the bytecode for deploying UniswapV2Factory, you can import the file via:
 
 `const UniswapV2FactoryBytecode = require('@uniswap/v2-core/build/UniswapV2Factory.json').bytecod`
+
+## Start React User Client Application
+
+Change directory to `uniswapintegration\client\liquidity`.  Then run `npm install` just to make sure you have all required packages installed.  Then run `npm start`.  This will open a browser to `http://localhost:3000`
