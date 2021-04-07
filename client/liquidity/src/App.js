@@ -5,10 +5,19 @@ import { Link, useHistory } from 'react-router-dom'
 import Select from "react-select";
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
-import env from "react-dotenv";
 import Web3 from 'web3';
 import { ethers } from 'ethers'
 import detectEthereumProvider from '@metamask/detect-provider';
+import {
+    WALLETADDRESS,
+    PRIVATEKEY,
+    INFURA,
+    DAI,
+    USDT,
+    ETH,
+    UNISWAPROUTER02,
+    NetworkChainId
+} from './environment'
 
 //Uniswap libraries
 import { ChainId, Token, TokenAmount, Pair, Route, Fetcher, WETH, Percent, Trade, TradeType } from '@uniswap/sdk'
@@ -23,7 +32,7 @@ function App() {
     
     let ethereum = window.ethereum;
     console.log(`Ethereum is Connected ${ethereum.isConnected()} selected address :: ${ethereum.selectedAddress}`)
-    const web3 = new Web3(Web3.currentProvider || env.INFURA_KOVAN)
+    const web3 = new Web3(Web3.currentProvider || INFURA)
     let provider = detectEthereumProvider();
     if(provider) {
         console.log(`Ethereum successfully detected`)
@@ -32,13 +41,14 @@ function App() {
         console.log(`Need to install Metamask`)
     }
 
-    const uniswaprouter = new web3.eth.Contract(uniswapv2routerJSON, env.MAINNET_UNISWAPROUTER02_ADDRESS);
-    const chainId = ChainId.MAINNET;
-    const USDT_KOVAN = web3.utils.toChecksumAddress(env.USDT_MAINNET);
-    const DAI_KOVAN = web3.utils.toChecksumAddress(env.DAI_MAINNET);
-    const ETH_CONTRACT_ADDRESS = env.ETH_CONTRACT_ADDRESS;
+    const uniswaprouter = new web3.eth.Contract(uniswapv2routerJSON, UNISWAPROUTER02);
+    const chainId = NetworkChainId;
+    const USDT_KOVAN = web3.utils.toChecksumAddress(USDT);
+    const DAI_KOVAN = web3.utils.toChecksumAddress(DAI);
+    const ETH_CONTRACT_ADDRESS = ETH;
     
-    const [httpprovider, sethttpprovider] = useState(env.INFURA_MAINNET)
+    const [httpprovider, sethttpprovider] = useState()
+    const [selectednetwork, setselectednetwork] = useState(NetworkChainId) //safe settings 
     const [selected, setselected] = useState();
     const [selectedliquidity, setselectedliquidity] = useState();
     const [amounttoadd, setamounttoadd] = useState(0);
@@ -55,19 +65,25 @@ function App() {
     const [usdt, setusdt] = useState();
     const [slippageTolerance, setslippageTolerance] = useState();
     
+    const networkid = [
+        {label:"KOVAN", value:42},
+        {label:"MAINNET", value:1}
+    ]
+
+
     const pools = [
-        {label:"usdt/weth", value:env.USDT_MAINNET},
-        {label:"weth/dai", value:env.DAI_MAINNET}
+        {label:"usdt/weth", value: USDT},
+        {label:"weth/dai", value:DAI}
     ]
 
     const options = [
-        {value:env.ETH_CONTRACT_ADDRESS, label:"Ether"}, 
+        {value:ETH, label:"Ether"}, 
     ];
     const defaultOption = options[0];
 
     const liquidityoptions = [
-        {value: env.USDT_MAINNET, label:"USDT/WETH"},
-        {value: env.DAI_MAINNET, label: "WETH/DAI"}
+        {value: USDT, label:"USDT/WETH"},
+        {value: DAI, label: "WETH/DAI"}
     ]
 
     useEffect(() => {
@@ -81,6 +97,7 @@ function App() {
            sessionStorage.setItem('gweifastest',(res.data.fastest/10))
            sessionStorage.setItem('gweisafelow', (res.data.safeLow/10))
         })
+
     });
 
     //Get Execution Prices
@@ -89,7 +106,7 @@ function App() {
         let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
         //console.log('priceLevel');
         const amountIn = new BigNumber(convertedAmnt) //0.001 ETH
-        const usdt = await Fetcher.fetchTokenData(chainId,env.DAI_MAINNET);
+        const usdt = await Fetcher.fetchTokenData(chainId,DAI);
         const weth = await WETH[chainId];
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
@@ -111,41 +128,50 @@ function App() {
     async function addLiquidity(e) {
         e.preventDefault();
 
+        //must create two different instances of Token?
+        const tka = new Token(ChainId, DAI,18)
+        const tkb = new Token(ChainId, ETH,18) 
+        const newpair = new Pair( new TokenAmount(tka,'100000000000000000'), new TokenAmount(tkb, '100000000000000000') )
+
         let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
         //console.log('priceLevel');
         const amountIn = new BigNumber(convertedAmnt) //0.001 ETH
-        const usdt = await Fetcher.fetchTokenData(chainId, env.DAI_MAINNET);
+        const usdt = await Fetcher.fetchTokenData(chainId, DAI);
         const weth = await WETH[chainId];
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
+        //const route = new Route(newpair, tka)
         const tokenAmount = new TokenAmount(weth, amountIn);
-        const trade = new Trade(route, new TokenAmount(weth, '100000000000000000'), TradeType.EXACT_INPUT)
+        const trade = new Trade(route, new TokenAmount(weth, amountIn,18), TradeType.EXACT_INPUT)
         
         
         //setup Swap data
-        const slippageTolerance = new Percent('50','10000') //50 bips 1 bip = 0.050
+        const slippageTolerance = new Percent('50','100000') //50 bips 1 bip = 0.050
         const amountOutMin = trade.minimumAmountOut(slippageTolerance).raw;
         const path = [weth.address, usdt.address]; //now we can interact with this pair
         const to = '';
         const deadline = Math.floor(Date.now()/1000) + 60 * 20;
-        const inputTokenAmount = trade.inputAmount.raw;
-        const outputTokenAmount = trade.outputAmount.raw
+        const inputTokenAmount = trade.inputAmount.raw; //HOW MUCH ETH WE ARE WILLING TO SEND
+        const outputTokenAmount = trade.outputAmount.raw //
 
         let ethereum = window.ethereum;
         await ethereum.enable();
         let provider = new ethers.providers.Web3Provider(ethereum);
         let weiamount = web3.utils.toWei(amounttoadd,'ether')
         
+        //console out inputs 
+        console.log(`Params: ${amountOutMin} :: ${amounttoadd} :: ${amountOutMin} :: ${weiamount} :: ${path} :: ${USDT} `);
+
         // Acccounts now exposed
         const params = [{
             gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
-            gasLimit: (sessionStorage.getItem('gweifastest')).padEnd(9,0), // customizable by user during MetaMask confirmation.
+            gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), // customizable by user during MetaMask confirmation.
             from: ethereum.selectedAddress, // must match user's active address.
-            value: weiamount, // Only required to send ether to the recipient from the initiating external account.
-            data: uniswaprouter.methods.swapETHForExactTokens(
-                                            amountIn,
+            value: web3.utils.toHex(outputTokenAmount), // Only required to send ether to the recipient from the initiating external account.
+            data: uniswaprouter.methods.swapExactETHForTokens(
+                                            new BigNumber(amountOutMin), 
                                             path,
-                                            env.USDT_MAINNET,
+                                            USDT,
                                             deadline
                                 ).encodeABI()
         }];
@@ -160,7 +186,7 @@ function App() {
         e.preventDefault();
         let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
         const amountIn = new BigNumber(convertedAmnt) //0.001 ETH
-        const usdt = await Fetcher.fetchTokenData(chainId, env.DAI_MAINNET);
+        const usdt = await Fetcher.fetchTokenData(chainId, DAI);
         const weth = await WETH[chainId];
         const pair = await Fetcher.fetchPairData(usdt, weth);
         const route = new Route([pair], weth);
@@ -190,7 +216,7 @@ function App() {
             from: ethereum.selectedAddress, // must match user's active address.
             value: weiamount, // Only required to send ether to the recipient from the initiating external account.
             data: uniswaprouter.methods.removeLiquidity(
-                                                        env.ETH_CONTRACT_ADDRESS,
+                                                        ETH,
                                                         selectedliquidity,
                                                         new BigNumber(weiamount),
                                                         new BigNumber(inputTokenAmount),
@@ -216,9 +242,23 @@ function App() {
         setselectedliquidity(e.value);
     }
 
+    //future functionality
+    function getSelectedNetwork(e) {
+        setselectednetwork(e.value)    
+    }
+
   return (
     <div className='container'>
-                        
+
+        <div>Select Network Environment</div>
+            <div>
+                    <Select
+                        defaultValue={selectednetwork}
+                        onChange={getSelectedNetwork}
+                        options={networkid}
+                    />
+            </div>  
+
         <div>From</div>
             <div>
                     <Select
