@@ -16,6 +16,7 @@ import {
     USDT,
     ETH,
     UNISWAPROUTER02,
+    ANATHALP,
     NetworkChainId
 } from './environment'
 
@@ -23,6 +24,7 @@ import {
 import { ChainId, Token, TokenAmount, Pair, Route, Fetcher, WETH, Percent, Trade, TradeType } from '@uniswap/sdk'
 import HDWalletProvider from '@truffle/hdwallet-provider';
 import uniswapv2routerJSON from './UniswapV2Router.json';
+import anathalpJSON from './AnathaLP.json'
 
 function App() {
 
@@ -32,6 +34,7 @@ function App() {
     
     let ethereum = window.ethereum;
     console.log(`Ethereum is Connected ${ethereum.isConnected()} selected address :: ${ethereum.selectedAddress}`)
+    sessionStorage.setItem('selectedaddress', ethereum.selectedAddress)
     const web3 = new Web3(Web3.currentProvider || INFURA)
     let provider = detectEthereumProvider();
     if(provider) {
@@ -42,6 +45,7 @@ function App() {
     }
 
     const uniswaprouter = new web3.eth.Contract(uniswapv2routerJSON, UNISWAPROUTER02);
+    const anathalp = new web3.eth.Contract(anathalpJSON, ANATHALP)
     const chainId = NetworkChainId;
     const USDT_KOVAN = web3.utils.toChecksumAddress(USDT);
     const DAI_KOVAN = web3.utils.toChecksumAddress(DAI);
@@ -124,6 +128,50 @@ function App() {
 
     }
     
+    //Add to liquidity Smart Contract
+    async function addLiquiditySC(e) {
+        e.preventDefault();
+        //const pair = createPair();
+
+        //setup trade
+        let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
+        const amountIn = new BigNumber(convertedAmnt);
+        
+        //setup Swap data
+        const slippageTolerance = new Percent('50','100000') //50 bips 1 bip = 0.050
+        const amountOutMin = 10; //trade.minimumAmountOut(slippageTolerance).raw;
+        const deadline = Math.floor(Date.now()/1000) + 60 * 20;
+        
+        /*
+        * just need to get wallet address and private key from Metamask connected address because we are interfacing with smart contract directly and not through meta mask
+        */
+        let ethereum = window.ethereum;
+        await ethereum.enable();
+        let provider = new ethers.providers.Web3Provider(ethereum);
+        let accounts = provider.listAccounts()
+                                .then(result => console.log(result))
+                                .catch(error => console.log(error))
+
+        //console out inputs 
+        console.log(`Params: ${amountIn} :: ${amountOutMin} :: ${deadline}`);
+
+        // Acccounts now exposed
+        const params = [{
+            gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
+            gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), // customizable by user during MetaMask confirmation.
+            from: ethereum.selectedAddress, // must match user's active address.
+            value: web3.utils.toHex(amountIn), // Only required to send ether to the recipient from the initiating external account.
+            data: anathalp.methods.swapTokensForETH(
+                                                    DAI, 
+                                                    amountIn, 
+                                                    amountOutMin, 
+                                                    deadline).encodeABI()
+        }];
+
+        const transactionHash = await provider.send('eth_sendTransaction', params)
+        console.log('transactionHash is ' + transactionHash);
+    }
+
     //Add to liquidity
     async function addLiquidity(e) {
         e.preventDefault();
@@ -160,7 +208,7 @@ function App() {
         let weiamount = web3.utils.toWei(amounttoadd,'ether')
         
         //console out inputs 
-        console.log(`Params: ${amountOutMin} :: ${amounttoadd} :: ${amountOutMin} :: ${weiamount} :: ${path} :: ${USDT} `);
+        console.log(`Params: ${amountIn} :: ${amountOutMin} :: ${weiamount} :: ${deadline}`);
 
         // Acccounts now exposed
         const params = [{
@@ -288,7 +336,7 @@ function App() {
                     <button type="submit" className="btn btn-primary mb-5">View Price Levels</button>
                 </form>
 
-                <form onSubmit={(e)=>addLiquidity(e)} className='col-md-5 mx-auto'>
+                <form onSubmit={(e)=>addLiquiditySC(e)} className='col-md-5 mx-auto'>
                     <button type="submit" className="btn btn-primary mb-5">Add To Pool</button>
                 </form>
 

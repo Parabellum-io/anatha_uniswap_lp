@@ -6,6 +6,7 @@ const DAI = '0xfdf7f21eda1fb8aebed2fc8b0e8f72a8f17cf823'
 const USDT = '0xfdf7f21eda1fb8aebed2fc8b0e8f72a8f17cf823'
 const ETH = '0x0000000000000000000000000000000000000000'
 const UNISWAPROUTER02 = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
+const ANATHALP = '0x4a15cf3200f8ac66c5742fa1168be42f5bf973b0'
 const NetworkChainId = 42
 
 export {
@@ -16,5 +17,6 @@ export {
     USDT,
     ETH,
     UNISWAPROUTER02,
+    ANATHALP,
     NetworkChainId
 } 
