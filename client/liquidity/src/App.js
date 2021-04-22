@@ -7,6 +7,8 @@ import 'react-tabs/style/react-tabs.css';
 import Select from "react-select";
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
+//const { Fetcher, WETH, TokenAmount, Percent } = require('@uniswap/sdk')
+//const UNISWAP = require('@uniswap/sdk')
 import Web3 from 'web3';
 import { ethers } from 'ethers'
 import detectEthereumProvider from '@metamask/detect-provider';
@@ -31,6 +33,7 @@ import {
 //Uniswap libraries
 import { ChainId, Token, TokenAmount, Pair, Route, Fetcher, WETH, Percent, Trade, TradeType } from '@uniswap/sdk'
 import uniswapv2routerJSON from './UniswapV2Router.json';
+import  balanceOfJSON  from './balanceofABI.json';
 import anathalpJSON from './AnathaLP.json'
 
 function App() {
@@ -48,6 +51,7 @@ function App() {
         ['function appAddLiquidityETH(address token,uint amountTokenDesired,uint amountTokenMin,uint amountETHMin,address to,uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity)'],
         account
         )
+    
     sessionStorage.setItem('selectedaddress', ethereum.selectedAddress)
     const web3 = new Web3(Web3.currentProvider || INFURA)
     let ethereumprovider = detectEthereumProvider();
@@ -114,12 +118,12 @@ function App() {
         //window.ethereum.enable();
         //let accounts = web3.eth.accounts;
         //Get current gas cost from Eth Gas Station
-        axios.get(`https://ethgasstation.info/api/ethgasAPI.json?api-key=510e5437d0d81016ceafb6e9b96fd9998482aef4c7d337fc41c58f929d25`)
+        /*axios.get(`https://ethgasstation.info/api/ethgasAPI.json?api-key=510e5437d0d81016ceafb6e9b96fd9998482aef4c7d337fc41c58f929d25`)
         .then(res => {
            sessionStorage.setItem('gweifast',(res.data.fast/10))
            sessionStorage.setItem('gweifastest',(res.data.fastest/10))
            sessionStorage.setItem('gweisafelow', (res.data.safeLow/10))
-        })
+        })*/
 
     });
 
@@ -127,12 +131,13 @@ function App() {
     async function appAddLiquidityETH(e) {
         e.preventDefault();
         /*setup values params for addLiquidityETH*/
-
+        
         //contract address of the desired token
-        let tokenAddress = selectedliquidity; 
+        let tokenAddress = selectedliquidity;
+        getBalanceOfAsset(tokenAddress)
         //amout of token to add as liquidity WETH/token price is <= msg.value/amountTokenDesired(token depreciates)
-        let _amountTokenDesired = Web3.utils.toWei('117','ether');  //amount of DAI I want to give
-        let amountTokenDesired = new BigNumber(_amountTokenDesired);
+        //let _amountTokenDesired = Web3.utils.toWei(a,'ether');  //amount of DAI I want to give
+        let amountTokenDesired = 0;//await getPairPrice(tokenAddress);
         //bounds extent to which WETH/token price can go up before the transaction revert(tollerance) <=amountTokenDesire
         let _amountTokenMin = Web3.utils.toWei('12','ether') //<= amount as amountTokenDesired (range)
         let amountTokenMin = new BigNumber(_amountTokenMin); 
@@ -147,7 +152,7 @@ function App() {
         let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
        const _amountIn = new BigNumber(convertedAmnt);
        console.log(`${_amountIn} :: ${tokenAddress} :: ${amountTokenDesired} :: ${amountTokenMin} :: ${amountETHMin} :: ${ethereum.selectedAddress} :: ${new BigNumber(deadline)}`) 
-       const tx = await anathalp.appAddLiquidityETH(
+       /*const tx = await anathalp.appAddLiquidityETH(
             tokenAddress,
             amountTokenDesired,
             amountTokenMin,
@@ -155,26 +160,16 @@ function App() {
             ethereum.selectedAddress,
             deadline,
             {value: _amountIn, gasPrice: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0) }
-            )
+            )*/
         
-       /*const params = [{
-            gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
-            gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), // customizable by user during MetaMask confirmation.
-            from: ethereum.selectedAddress, // must match user's active address.
-            value: web3.utils.toHex(_amountIn), // Only required to send ether to the recipient from the initiating external account.
-            data: anathalp.methods.appAddLiquidityETH(
-                                                    tokenAddress,
-                                                    amountTokenDesired,
-                                                    amountTokenMin,
-                                                    amountETHMin,
-                                                    ethereum.selectedAddress,
-                                                    deadline).encodeABI()
-        }];*/
+        //const transactionHash = await provider.send('eth_sendTransaction', tx)
+        //console.log('transactionHash is ' + transactionHash);
+    }
 
-        //let receipt = await tx.wait();
-        //console.log(`Transaction block ${receipt.blockNumber}`)
-        const transactionHash = await provider.send('eth_sendTransaction', tx)
-        console.log('transactionHash is ' + transactionHash);
+    async function getBalanceOfAsset(assetAddress) {
+        let contract = new web3.eth.Contract(balanceOfJSON, assetAddress)
+        let balanceobj = await contract.methods.balanceOf(WALLETADDRESS).call();
+        console.log(`balance ${balanceobj.toNumber}`)
     }
 
     //Get Execution Prices
