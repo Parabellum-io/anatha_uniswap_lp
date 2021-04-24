@@ -32,9 +32,10 @@ import {
 
 //Uniswap libraries
 import { ChainId, Token, TokenAmount, Pair, Route, Fetcher, WETH, Percent, Trade, TradeType } from '@uniswap/sdk'
-import uniswapv2routerJSON from './UniswapV2Router.json';
+//import uniswapv2routerJSON from './UniswapV2Router.json';
 import  balanceOfJSON  from './balanceofABI.json';
 import anathalpJSON from './AnathaLP.json'
+import uniswapv2router2ABI from './UniswapV2Router02.json'
 
 function App() {
 
@@ -43,17 +44,20 @@ function App() {
         */
     let ethereum = window.ethereum;
     ethereum.enable();
+    const web3 = new Web3(Web3.currentProvider || INFURA)
     let provider = new ethers.providers.Web3Provider(ethereum);
     let signer = new ethers.Wallet(PRIVATEKEY);
     let account = signer.connect(provider);
-    const anathalp = new ethers.Contract(
+    /*const anathalp = new ethers.Contract(
         ANATHALP,
         ['function appAddLiquidityETH(address token,uint amountTokenDesired,uint amountTokenMin,uint amountETHMin,address to,uint deadline) external payable returns (uint amountToken, uint amountETH, uint liquidity)'],
         account
-        )
+        )*/
+    const anathalp = new web3.eth.Contract(anathalpJSON, ANATHALP)
+
     
     sessionStorage.setItem('selectedaddress', ethereum.selectedAddress)
-    const web3 = new Web3(Web3.currentProvider || INFURA)
+    
     let ethereumprovider = detectEthereumProvider();
     if(ethereumprovider) {
         console.log(`Ethereum successfully detected`)
@@ -62,7 +66,7 @@ function App() {
         console.log(`Unable to deteect Ethereum.  Need to install to use Metamask`)
     }
 
-    const uniswaprouter = new web3.eth.Contract(uniswapv2routerJSON, UNISWAPROUTER02);
+    const uniswaprouter = new web3.eth.Contract(uniswapv2router2ABI, UNISWAPROUTER02);
     const chainId = NetworkChainId;
     /*const USDT_KOVAN = web3.utils.toChecksumAddress(USDT);
     const DAI_KOVAN = web3.utils.toChecksumAddress(DAI);
@@ -130,20 +134,18 @@ function App() {
     //Adds liquidity to ERC20 <=> WETH pool with ETH
     async function appAddLiquidityETH(e) {
         e.preventDefault();
+        //need to get current balances
+
         /*setup values params for addLiquidityETH*/
         
         //contract address of the desired token
         let tokenAddress = selectedliquidity;
-        getBalanceOfAsset(tokenAddress)
         //amout of token to add as liquidity WETH/token price is <= msg.value/amountTokenDesired(token depreciates)
-        //let _amountTokenDesired = Web3.utils.toWei(a,'ether');  //amount of DAI I want to give
-        let amountTokenDesired = 0;//await getPairPrice(tokenAddress);
+        let amountTokenDesired = await getBalanceOfDAI(tokenAddress)
         //bounds extent to which WETH/token price can go up before the transaction revert(tollerance) <=amountTokenDesire
-        let _amountTokenMin = Web3.utils.toWei('12','ether') //<= amount as amountTokenDesired (range)
-        let amountTokenMin = new BigNumber(_amountTokenMin); 
+        let amountTokenMin = amountTokenDesired - (amountTokenDesired*.03) //minimum 3% or var% than the desired token. 
         //bounds extent to which token/WETH price can go up before transaction revert <=msg.value
-        let _amountETHMin = Web3.utils.toWei('0.01', 'ether') 
-        let amountETHMin = new BigNumber(_amountETHMin); 
+        let amountETHMin = amountTokenDesired + (amountTokenDesired*.03)
         //Recipient of the liquidity tokens
         let to = WALLETADDRESS;  
         let deadline = Math.floor(Date.now()/1000) + 60 * 20;
@@ -152,24 +154,37 @@ function App() {
         let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
        const _amountIn = new BigNumber(convertedAmnt);
        console.log(`${_amountIn} :: ${tokenAddress} :: ${amountTokenDesired} :: ${amountTokenMin} :: ${amountETHMin} :: ${ethereum.selectedAddress} :: ${new BigNumber(deadline)}`) 
-       /*const tx = await anathalp.appAddLiquidityETH(
-            tokenAddress,
-            amountTokenDesired,
-            amountTokenMin,
-            amountETHMin,
-            ethereum.selectedAddress,
-            deadline,
-            {value: _amountIn, gasPrice: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0) }
-            )*/
+       const tx = [{
+            gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
+            gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), // customizable by user during MetaMask confirmation.
+            from: ethereum.selectedAddress, // must match user's active address.
+            value: web3.utils.toHex(_amountIn), // Only required to send ether to the recipient from the initiating external account.
+            data: uniswaprouter.methods.addLiquidityETH(
+                                                    tokenAddress,
+                                                    amountTokenDesired,
+                                                    amountTokenMin,
+                                                    amountETHMin,
+                                                    ethereum.selectedAddress,
+                                                    deadline).encodeABI()
+        }];
         
-        //const transactionHash = await provider.send('eth_sendTransaction', tx)
-        //console.log('transactionHash is ' + transactionHash);
+        const transactionHash = await provider.send('eth_sendTransaction', tx)
+        console.log('transactionHash is ' + transactionHash);
     }
 
-    async function getBalanceOfAsset(assetAddress) {
-        let contract = new web3.eth.Contract(balanceOfJSON, assetAddress)
-        let balanceobj = await contract.methods.balanceOf(WALLETADDRESS).call();
-        console.log(`balance ${balanceobj.toNumber}`)
+    //get balance of an asset.  this is normally reflecting from Metamask
+    async function getBalanceOfDAI(assetAddress) {
+        let contract = await new web3.eth.Contract(balanceOfJSON, assetAddress)
+        let balance = await contract.methods.balanceOf(WALLETADDRESS).call();
+        console.log(`current ${balance}`)
+        return balance
+    }
+
+    async function getBalanceOfUSDC(assetAddress) {
+        /*let contract = await new web3.eth.Contract(balanceOfJSON, assetAddress)
+        let balance = await contract.methods.balanceOf(WALLETADDRESS).call();
+        console.log(`current ${balance}`)
+        return balance*/
     }
 
     //Get Execution Prices
