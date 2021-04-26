@@ -1,9 +1,10 @@
 import './App.css';
 import logo from './logo.svg';
-import React, {useState, useEffect} from 'react'
-import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
-import { Link, useHistory } from 'react-router-dom'
+import React, {useState, useEffect, Component} from 'react'
+import { ReactDOM } from 'react-dom'
+import {Tab, Tabs, TabList, TabPanel} from 'react-tabs'
 import 'react-tabs/style/react-tabs.css';
+import { Link, useHistory } from 'react-router-dom'
 import Select from "react-select";
 import axios from 'axios';
 import BigNumber from 'bignumber.js';
@@ -38,6 +39,7 @@ import  balanceOfJSON  from './balanceofABI.json';
 import anathalpJSON from './AnathaLP.json'
 import uniswapv2router2ABI from './UniswapV2Router02.json'
 import { isCommunityResourcable } from '@ethersproject/providers';
+import { AppBar } from '@material-ui/core';
 
 function App() {
 
@@ -357,70 +359,111 @@ function App() {
     }
 
   return (
+    
     <div className='container'>
-        <div><NavBar /></div>
-        <div>Select Network Environment</div>
-            <div>
-                    <Select
-                        defaultValue={selectednetwork}
-                        onChange={getSelectedNetwork}
-                        options={networkid}
-                    />
-            </div>  
+    
+    <div><NavBar /></div>
+    <div>
+                <Select
+                    defaultValue={selectednetwork}
+                    onChange={getSelectedNetwork}
+                    options={networkid}
+                    placeholder="Select Network"
+                />
+    </div>
 
-        <div>From</div>
-            <div>
-                    <Select
-                        defaultValue={selected}
-                        onChange={getSelectedAsset}
-                        options={options}
-                    />
-            </div>
-        <div>To</div>
-        <div>
-            <div>
-                    <Select
-                        defaultValue={selectedliquidity}
-                        onChange={getSelectedLiquidity}
-                        options={liquidityoptions}
-                    />
-            </div>
-        </div>
+    <Tabs>
+    <TabList>
+      <Tab>Pool</Tab>
+      <Tab>Swap</Tab>
+    </TabList>
 
-        <div>
-                    <label>Enter Amount In ETH To Send</label>&nbsp;&nbsp;&nbsp;&nbsp;
-                    <input type="text" className="form-control" value={amounttoadd} onChange={(e)=>{setamounttoadd(e.target.value)}} required />
-        </div>
-        
-        <div sytle={{paddingTop: '1000px'}}>
-            <div>
-                    
-                    <label><b>Mid Price</b> ${midPrice}</label>
-                    <label style={{ paddingLeft: '20px'}}><b>Invert Price</b> ${invertPrice}</label>
-                    <label style={{ paddingLeft: '20px'}}><b>Execution Price</b> ${midPrice}</label>
-                    <label style={{ paddingLeft: '20px'}}><b>Next Mid Price</b> ${executionPrice}</label>
+    <TabPanel>
+                    <div>From</div>
+                        <div>
+                                <Select
+                                    defaultValue={selected}
+                                    onChange={getSelectedAsset}
+                                    options={options}
+                                />
+                        </div>
+                    <div>To</div>
                     <div>
-                    <form onSubmit={(e)=>priceLevels(e)}>
-                        <button type="submit" className="btn btn-primary mb-5">View Price Levels</button>
-                    </form>
+                        <div>
+                                <Select
+                                    defaultValue={selectedliquidity}
+                                    onChange={getSelectedLiquidity}
+                                    options={liquidityoptions}
+                                />
+                        </div>
                     </div>
-                    
-            </div>
-        </div>
 
-        <div style={{paddingTop: '25px'}}>
-           <form onSubmit={(e)=>appSwapExactETHForTokens(e)} style={{paddingBottom:'10px'}}>
-                    <button type="submit" className="btn btn-primary" disabled>Swap Assets</button>
-            </form>
-            
-            <form onSubmit={(e)=>_addLiquidty(e)} style={{paddingBottom:'10px'}}>
-                    <button type="submit" className="btn btn-primary">Add To Liquidity</button>
-            </form>
-            
-            <form onSubmit={(e)=>withdrawFromLiquidity(e)} style={{paddingBottom:'10px'}}>
-                    <button type="submit" className="btn btn-primary">Withdraw Pool</button>
-            </form>
+                    <div>
+                                <label>Enter Amount In ETH To Send</label>&nbsp;&nbsp;&nbsp;&nbsp;
+                                <input type="text" className="form-control" value={amounttoadd} onChange={(e)=>{setamounttoadd(e.target.value)}} required />
+                    </div>
+                    <div style={{paddingTop: '25px'}}>
+       
+        
+        <form onSubmit={(e)=>_addLiquidty(e)} style={{paddingBottom:'10px'}}>
+                <button type="submit" className="btn btn-primary">Add To Liquidity</button>
+        </form>
+        
+        <form onSubmit={(e)=>withdrawFromLiquidity(e)} style={{paddingBottom:'10px'}}>
+                <button type="submit" className="btn btn-primary">Withdraw Pool</button>
+        </form>
+    </div>
+    </TabPanel>
+
+    <TabPanel>
+                <div>From</div>
+                    <div>
+                            <Select
+                                defaultValue={selected}
+                                onChange={getSelectedAsset}
+                                options={options}
+                            />
+                    </div>
+                <div>To</div>
+                <div>
+                    <div>
+                            <Select
+                                defaultValue={selectedliquidity}
+                                onChange={getSelectedLiquidity}
+                                options={liquidityoptions}
+                            />
+                    </div>
+                </div>
+
+                <div>
+                            <label>Enter Amount In ETH To Send</label>&nbsp;&nbsp;&nbsp;&nbsp;
+                            <input type="text" className="form-control" value={amounttoadd} onChange={(e)=>{setamounttoadd(e.target.value)}} required />
+                </div>
+                <div style={{paddingTop: '25px'}}>
+                    <form onSubmit={(e)=>appSwapExactETHForTokens(e)} style={{paddingBottom:'10px'}}>
+                                <button type="submit" className="btn btn-primary">Swap Assets</button>
+                        </form>
+                        
+    </div>
+    </TabPanel>
+    </Tabs>
+
+
+    <div sytle={{paddingTop: '1000px'}}>
+        <div>
+                
+                <label><b>Mid Price</b> ${midPrice}</label>
+                <label style={{ paddingLeft: '20px'}}><b>Invert Price</b> ${invertPrice}</label>
+                <label style={{ paddingLeft: '20px'}}><b>Execution Price</b> ${midPrice}</label>
+                <label style={{ paddingLeft: '20px'}}><b>Next Mid Price</b> ${executionPrice}</label>
+                <div>
+                <form onSubmit={(e)=>priceLevels(e)}>
+                    <button type="submit" className="btn btn-primary mb-5">View Price Levels</button>
+                </form>
+                </div>
+                
         </div>
+    </div>
 
     </div>
    
