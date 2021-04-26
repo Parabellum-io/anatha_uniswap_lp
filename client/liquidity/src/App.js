@@ -24,6 +24,7 @@ import {
     INFURA,
     DAI,
     USDT,
+    USDC,
     ETH,
     UNISWAPROUTER02,
     ANATHALP,
@@ -36,6 +37,7 @@ import { ChainId, Token, TokenAmount, Pair, Route, Fetcher, WETH, Percent, Trade
 import  balanceOfJSON  from './balanceofABI.json';
 import anathalpJSON from './AnathaLP.json'
 import uniswapv2router2ABI from './UniswapV2Router02.json'
+import { isCommunityResourcable } from '@ethersproject/providers';
 
 function App() {
 
@@ -107,12 +109,13 @@ function App() {
         {label:"USDT", value: USDT},
         {label:"DAI", value:DAI},
         {label: "USDC", value:'USDC'},
-        {value:ETH, label:"Ether"}
+        {value:ETH, label:"ETH"}
     ];
     const defaultOption = options[0];
 
     const liquidityoptions = [
         {value: USDT, label:"USDT"},
+        {label: "USDC", value:'USDC'},
         {value: DAI, label: "DAI"},
         {value: ETH, label: "ETH"}
     ]
@@ -131,7 +134,7 @@ function App() {
 
     });
 
-    //Adds liquidity to ERC20 <=> WETH pool with ETH
+    //Adds liquidity to ERC20 <=> WETH pool with ETH.  Use only if adding pairs that includes ETH because ETH is not ERC20 compliant
     async function appAddLiquidityETH(e) {
         e.preventDefault();
         //need to get current balances
@@ -139,13 +142,13 @@ function App() {
         /*setup values params for addLiquidityETH*/
         
         //contract address of the desired token
-        let tokenAddress = selectedliquidity;
+        let tokenAddress = selectedliquidity.value; //value = contract address
         //amout of token to add as liquidity WETH/token price is <= msg.value/amountTokenDesired(token depreciates)
-        let amountTokenDesired = await getBalanceOfDAI(tokenAddress)
+        let amountTokenDesired = web3.utils.toWei('0.2','ether')
         //bounds extent to which WETH/token price can go up before the transaction revert(tollerance) <=amountTokenDesire
-        let amountTokenMin = amountTokenDesired - (amountTokenDesired*.03) //minimum 3% or var% than the desired token. 
+        let amountTokenMin = web3.utils.toWei('0.009','ether')
         //bounds extent to which token/WETH price can go up before transaction revert <=msg.value
-        let amountETHMin = amountTokenDesired + (amountTokenDesired*.03)
+        let amountETHMin = web3.utils.toWei('1','ether')
         //Recipient of the liquidity tokens
         let to = WALLETADDRESS;  
         let deadline = Math.floor(Date.now()/1000) + 60 * 20;
@@ -155,8 +158,8 @@ function App() {
        const _amountIn = new BigNumber(convertedAmnt);
        console.log(`${_amountIn} :: ${tokenAddress} :: ${amountTokenDesired} :: ${amountTokenMin} :: ${amountETHMin} :: ${ethereum.selectedAddress} :: ${new BigNumber(deadline)}`) 
        const tx = [{
-            gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
-            gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), // customizable by user during MetaMask confirmation.
+            gasPrice:  (sessionStorage.getItem('gweifastest')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
+            //gasLimit: (sessionStorage.getItem('gweifastest')).padEnd(9,0), // customizable by user during MetaMask confirmation.
             from: ethereum.selectedAddress, // must match user's active address.
             value: web3.utils.toHex(_amountIn), // Only required to send ether to the recipient from the initiating external account.
             data: uniswaprouter.methods.addLiquidityETH(
@@ -187,6 +190,58 @@ function App() {
         return balance*/
     }
 
+    //Adds liquidity to an ERC20 <=> ERC20
+    async function appAddLiquidity(e) {
+        e.preventDefault();
+
+        //contract address of the desired token
+        let tokenA = USDC
+        //contract address of the desired token
+        let tokenB = DAI
+        //amount of tokena to add as liquidity if b/a price is <= amountBdesired/amountAdesired
+        let amountAdesired = web3.utils.toWei(amounttoadd,'ether')
+        //amount of tokenB to add as liquidity if the A/B price is <= amountADesired/amountBDesired (B depreciates).
+        let amountBdesired = web3.utils.toWei(amounttoadd,'ether')
+        //Bounds the extent to which the B/A price can go up before the transaction reverts. Must be <= amountADesired
+        let amountAMin = web3.utils.toWei('0.01','ether')
+        //Bounds the extent to which the A/B price can go up before the transaction reverts. Must be <= amountBDesired.
+        let amountBMin = web3.utils.toWei('0.01','ether')
+        //recipient of liquidity tokens
+        let to = WALLETADDRESS
+        //timestamp after which transaction will revert
+        let deadline = Math.floor(Date.now()/1000) + 60 * 20;
+
+
+        let ethereum = window.ethereum;
+        await ethereum.enable();
+        let provider = new ethers.providers.Web3Provider(ethereum);
+        let weiamount = web3.utils.toWei(amounttoadd,'ether')
+        
+        //console out inputs 
+        console.log(`AddLP Params: ${amountAdesired} :: ${amountBdesired} :: ${amountAMin} :: ${amountBMin}`);
+
+        // Acccounts now exposed
+        const params = [{
+            gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
+            gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), // customizable by user during MetaMask confirmation.
+            from: ethereum.selectedAddress, // must match user's active address.
+            value: weiamount, // Only required to send ether to the recipient from the initiating external account.
+            data: uniswaprouter.methods.addLiquidity(
+                                            tokenA,
+                                            tokenB,
+                                            amountAdesired,
+                                            amountBdesired,
+                                            amountAMin,
+                                            amountBMin,
+                                            to,
+                                            deadline
+                                ).encodeABI()
+        }];
+
+        const transactionHash = await provider.send('eth_sendTransaction', params)
+        console.log('transactionHash is ' + transactionHash);
+    }
+
     //Get Execution Prices
     async function priceLevels(e) {
         e.preventDefault();
@@ -211,11 +266,7 @@ function App() {
         setnextMidPrice(nextMidPrice);
         setinvertPrice(invertPrice)
     }
-    
-    //Adds liquidity to an ERC20 <=> ERC20
-    async function appAddLiquidity(e) {
-        e.preventDefault();
-    }
+
 
     //Swap Assets
     async function appSwapExactETHForTokens(e) {
@@ -259,63 +310,29 @@ function App() {
         console.log('transactionHash is ' + transactionHash);*/
     }
 
-    //Add to liquidity
-    async function addLiquidity(e) {
+    //Determine to call appAddLiquidityETH or appLiquidity
+    function addLiquidity(e) {
         e.preventDefault();
-
-        //must create two different instances of Token?
-        const tka = new Token(ChainId, DAI,18)
-        const tkb = new Token(ChainId, ETH,18) 
-        const newpair = new Pair( new TokenAmount(tka,'100000000000000000'), new TokenAmount(tkb, '100000000000000000') )
-
-        let convertedAmnt = Web3.utils.toWei(amounttoadd,'ether');
-        //console.log('priceLevel');
-        const amountIn = new BigNumber(convertedAmnt) //0.001 ETH
-        const usdt = await Fetcher.fetchTokenData(chainId, DAI);
-        const weth = await WETH[chainId];
-        const pair = await Fetcher.fetchPairData(usdt, weth);
-        const route = new Route([pair], weth);
-        //const route = new Route(newpair, tka)
-        const tokenAmount = new TokenAmount(weth, amountIn);
-        const trade = new Trade(route, new TokenAmount(weth, amountIn,18), TradeType.EXACT_INPUT)
-        
-        
-        //setup Swap data
-        const slippageTolerance = new Percent('50','100000') //50 bips 1 bip = 0.050
-        const amountOutMin = trade.minimumAmountOut(slippageTolerance).raw;
-        const path = [weth.address, usdt.address]; //now we can interact with this pair
-        const to = '';
-        const deadline = Math.floor(Date.now()/1000) + 60 * 20;
-        const inputTokenAmount = trade.inputAmount.raw; //HOW MUCH ETH WE ARE WILLING TO SEND
-        const outputTokenAmount = trade.outputAmount.raw //
-
-        let ethereum = window.ethereum;
-        await ethereum.enable();
-        let provider = new ethers.providers.Web3Provider(ethereum);
-        let weiamount = web3.utils.toWei(amounttoadd,'ether')
-        
-        //console out inputs 
-        //console.log(`Params: ${amountIn} :: ${amountOutMin} :: ${weiamount} :: ${deadline}`);
-
-        // Acccounts now exposed
-        const params = [{
-            gasPrice:  (sessionStorage.getItem('gweisafelow')).padEnd(9,0), //'0x09184e72a000', // customizable by user during MetaMask confirmation.
-            gasLimit: (sessionStorage.getItem('gweisafelow')).padEnd(9,0), // customizable by user during MetaMask confirmation.
-            from: ethereum.selectedAddress, // must match user's active address.
-            value: web3.utils.toHex(outputTokenAmount), // Only required to send ether to the recipient from the initiating external account.
-            data: uniswaprouter.methods.swapExactETHForTokens(
-                                            new BigNumber(amountOutMin), 
-                                            path,
-                                            USDT,
-                                            deadline
-                                ).encodeABI()
-        }];
-
-        const transactionHash = await provider.send('eth_sendTransaction', params)
-        console.log('transactionHash is ' + transactionHash);
-        
+        console.log(`addLiquidity`)
     }
     
+    /*
+    * This function determines which addLiquidity function to call
+    * Either addLiquidityETH or addLiquidity.  Remember addLiquidityETH if the pair has ETH.  ETH is not ERC20 compliant
+    * therefore it must be wrapped with WETH.  But if pair is ERC20 to ERC20, USDC/DAI, then addLiquidity function
+    * must instead be invoked
+    */
+    async function _addLiquidty(e) {
+        e.preventDefault();
+        //console.log(`selectedliquidty :: ${selected.label} :: selectedasset ${selectedliquidity.label}`)
+        if(selected.label === 'ETH' || selectedliquidity.label === 'ETH') {
+            await appAddLiquidityETH(e)
+        }
+        else {
+            await appAddLiquidity(e)
+        }
+    }
+
     //Withdraw from Liquidity
     async function withdrawFromLiquidity(e) {
         e.preventDefault();
@@ -324,12 +341,14 @@ function App() {
     
     function getSelectedAsset(e) {
         //must get actual address of the asset
-        setselected(e.value)
+        setselected(e)
+        console.log(e.label)
     }
 
     function getSelectedLiquidity(e) {
         //get the actual address of the pool
-        setselectedliquidity(e.value);
+        setselectedliquidity(e);
+        console.log(e.label)
     }
 
     //future functionality
@@ -390,11 +409,11 @@ function App() {
         </div>
 
         <div style={{paddingTop: '25px'}}>
-            <form onSubmit={(e)=>appSwapExactETHForTokens(e)} style={{paddingBottom:'10px'}}>
-                    <button type="submit" className="btn btn-primary">Swap Assets</button>
+           <form onSubmit={(e)=>appSwapExactETHForTokens(e)} style={{paddingBottom:'10px'}}>
+                    <button type="submit" className="btn btn-primary" disabled>Swap Assets</button>
             </form>
             
-            <form onSubmit={(e)=>appAddLiquidityETH(e)} style={{paddingBottom:'10px'}}>
+            <form onSubmit={(e)=>_addLiquidty(e)} style={{paddingBottom:'10px'}}>
                     <button type="submit" className="btn btn-primary">Add To Liquidity</button>
             </form>
             
